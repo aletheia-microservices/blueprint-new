@@ -5,7 +5,6 @@ import (
 
 	"github.com/blueprint-uservices/blueprint/blueprint/pkg/wiring"
 	"github.com/blueprint-uservices/blueprint/examples/dsb_hotel/workflow/hotelreservation"
-	"github.com/blueprint-uservices/blueprint/examples/dsb_hotel/workload/workloadgen"
 	"github.com/blueprint-uservices/blueprint/plugins/cmdbuilder"
 	"github.com/blueprint-uservices/blueprint/plugins/goproc"
 	"github.com/blueprint-uservices/blueprint/plugins/gotests"
@@ -17,7 +16,6 @@ import (
 	"github.com/blueprint-uservices/blueprint/plugins/mongodb"
 	"github.com/blueprint-uservices/blueprint/plugins/opentelemetry"
 	"github.com/blueprint-uservices/blueprint/plugins/workflow"
-	"github.com/blueprint-uservices/blueprint/plugins/workload"
 )
 
 // Wiring spec that represents the original configuration of the HotelReservation application.
@@ -37,13 +35,13 @@ func makeOriginalSpec(spec wiring.WiringSpec) ([]string, error) {
 	// Define backends
 	trace_collector := jaeger.Collector(spec, "jaeger")
 	user_db := mongodb.Container(spec, "user_db")
-	recommendations_db := mongodb.Container(spec, "recomd_db")
-	reserv_db := mongodb.Container(spec, "reserv_db")
+	recommendations_db := mongodb.Container(spec, "recommendation_db")
+	reservation_db := mongodb.Container(spec, "reservation_db")
 	geo_db := mongodb.Container(spec, "geo_db")
 	rate_db := mongodb.Container(spec, "rate_db")
 	profile_db := mongodb.Container(spec, "profile_db")
 
-	reserv_cache := memcached.Container(spec, "reserv_cache")
+	reservation_cache := memcached.Container(spec, "reservation_cache")
 	rate_cache := memcached.Container(spec, "rate_cache")
 	profile_cache := memcached.Container(spec, "profile_cache")
 
@@ -53,15 +51,15 @@ func makeOriginalSpec(spec wiring.WiringSpec) ([]string, error) {
 	cntrs = append(cntrs, user_ctr)
 	allServices = append(allServices, "user_service")
 
-	recomd_service := workflow.Service[hotelreservation.RecommendationService](spec, "recomd_service", recommendations_db)
-	recomd_ctr := applyDefaults(spec, recomd_service, trace_collector)
-	cntrs = append(cntrs, recomd_ctr)
-	allServices = append(allServices, "recomd_service")
+	recommendation_service := workflow.Service[hotelreservation.RecommendationService](spec, "recommendation_service", recommendations_db)
+	recommendation_ctr := applyDefaults(spec, recommendation_service, trace_collector)
+	cntrs = append(cntrs, recommendation_ctr)
+	allServices = append(allServices, "recommendation_service")
 
-	reserv_service := workflow.Service[hotelreservation.ReservationService](spec, "reserv_service", reserv_cache, reserv_db)
-	reserv_ctr := applyDefaults(spec, reserv_service, trace_collector)
-	cntrs = append(cntrs, reserv_ctr)
-	allServices = append(allServices, "reserv_service")
+	reservation_service := workflow.Service[hotelreservation.ReservationService](spec, "reservation_service", reservation_cache, reservation_db)
+	reservation_ctr := applyDefaults(spec, reservation_service, trace_collector)
+	cntrs = append(cntrs, reservation_ctr)
+	allServices = append(allServices, "reservation_service")
 
 	geo_service := workflow.Service[hotelreservation.GeoService](spec, "geo_service", geo_db)
 	geo_ctr := applyDefaults(spec, geo_service, trace_collector)
@@ -84,13 +82,10 @@ func makeOriginalSpec(spec wiring.WiringSpec) ([]string, error) {
 	allServices = append(allServices, "search_service")
 
 	// Define frontend service
-	frontend_service := workflow.Service[hotelreservation.FrontEndService](spec, "frontend_service", search_service, profile_service, recomd_service, user_service, reserv_service)
+	frontend_service := workflow.Service[hotelreservation.FrontEndService](spec, "frontend_service", search_service, profile_service, recommendation_service, user_service, reservation_service)
 	frontend_ctr := applyHTTPDefaults(spec, frontend_service, trace_collector)
 	cntrs = append(cntrs, frontend_ctr)
 	allServices = append(allServices, "frontend_service")
-
-	wlgen := workload.Generator[workloadgen.SimpleWorkload](spec, "wlgen", frontend_service)
-	cntrs = append(cntrs, wlgen)
 
 	tests := gotests.Test(spec, allServices...)
 	cntrs = append(cntrs, tests)
@@ -107,10 +102,18 @@ func applyDefaults(spec wiring.WiringSpec, serviceName string, collectorName str
 	return linuxcontainer.CreateContainer(spec, ctrName, procName)
 }
 
-func applyHTTPDefaults(spec wiring.WiringSpec, serviceName string, collectorName string) string {
+/* func applyHTTPDefaults(spec wiring.WiringSpec, serviceName string, collectorName string) string {
 	procName := fmt.Sprintf("%s_process", serviceName)
 	ctrName := fmt.Sprintf("%s_container", serviceName)
 	opentelemetry.Instrument(spec, serviceName, collectorName)
+	http.Deploy(spec, serviceName)
+	goproc.CreateProcess(spec, procName, serviceName)
+	return linuxcontainer.CreateContainer(spec, ctrName, procName)
+} */
+
+func applyHTTPDefaults(spec wiring.WiringSpec, serviceName, collectorName string) string {
+	procName := fmt.Sprintf("%s_process", serviceName)
+	ctrName := fmt.Sprintf("%s_container", serviceName)
 	http.Deploy(spec, serviceName)
 	goproc.CreateProcess(spec, procName, serviceName)
 	return linuxcontainer.CreateContainer(spec, ctrName, procName)

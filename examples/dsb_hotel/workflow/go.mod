@@ -1,21 +1,16 @@
 module github.com/blueprint-uservices/blueprint/examples/dsb_hotel/workflow
 
-go 1.22
-
-toolchain go1.22.1
-
-replace github.com/blueprint-uservices/blueprint/runtime => ../../../runtime
+go 1.22.4
 
 require (
 	github.com/blueprint-uservices/blueprint/runtime v0.0.0-20240405152959-f078915d2306
-	go.mongodb.org/mongo-driver v1.17.6
+	github.com/hailocab/go-geoindex v0.0.0-20160127134810-64631bfe9711
+	go.mongodb.org/mongo-driver v1.12.1
 )
 
 require (
-	github.com/go-logr/logr v1.4.3 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
-	go.opentelemetry.io/otel v1.32.0 // indirect
-	go.opentelemetry.io/otel/metric v1.32.0 // indirect
-	go.opentelemetry.io/otel/trace v1.32.0 // indirect
-	golang.org/x/exp v0.0.0-20240525044651-4c93da0ed11d // indirect
+	go.opentelemetry.io/otel v1.21.0 // indirect
+	go.opentelemetry.io/otel/metric v1.21.0 // indirect
+	go.opentelemetry.io/otel/trace v1.21.0 // indirect
+	golang.org/x/exp v0.0.0-20230728194245-b0cb94b80691 // indirect
 )

@@ -5,10 +5,8 @@ use (
 	./examples/digota/tests
 	./examples/digota/wiring
 	./examples/digota/workflow
-	./examples/dsb_hotel/tests
 	./examples/dsb_hotel/wiring
 	./examples/dsb_hotel/workflow
-	./examples/dsb_hotel/workload
 	./examples/dsb_mediamicroservices/tests
 	./examples/dsb_mediamicroservices/wiring
 	./examples/dsb_mediamicroservices/workflow

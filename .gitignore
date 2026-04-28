@@ -2,7 +2,7 @@
 examples/digota/build
 examples/dotnet_eshop/build
 examples/dsb_hotel/build
-examples/dsb_hotel2/build
+examples/dsb_hotel/build
 examples/dsb_mediamicroservices/build
 examples/dsb_socialnetwork/build
 examples/eshopmicroservices/build

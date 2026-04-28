@@ -8,7 +8,7 @@ import (
 
 func main() {
 	ctx := context.Background()
-	
+
 	var geoDB backend.NoSQLDatabase
 	geoService, _ := NewGeoServiceImpl(ctx, geoDB)
 

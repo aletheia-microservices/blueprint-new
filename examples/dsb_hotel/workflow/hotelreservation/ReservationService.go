@@ -24,81 +24,17 @@ type ReservationServiceImpl struct {
 	NumRequests  int64
 }
 
-/* func initReservationDB(ctx context.Context, db backend.NoSQLDatabase) error {
-
-	c, err := db.GetCollection(ctx, "reservation-db", "reservation")
-	if err != nil {
-		return err
-	}
-	err = c.InsertOne(ctx, &Reservation{"4", "Alice", "2015-04-09", "2015-04-10", 1})
-	if err != nil {
-		return err
-	}
-
-	c, err = db.GetCollection(ctx, "reservation-db", "number")
-	err = c.InsertOne(ctx, &HotelNumber{"1", 200})
-	if err != nil {
-		return err
-	}
-
-	err = c.InsertOne(ctx, &HotelNumber{"2", 200})
-	if err != nil {
-		return err
-	}
-
-	err = c.InsertOne(ctx, &HotelNumber{"3", 200})
-	if err != nil {
-		return err
-	}
-
-	err = c.InsertOne(ctx, &HotelNumber{"4", 200})
-	if err != nil {
-		return err
-	}
-
-	err = c.InsertOne(ctx, &HotelNumber{"5", 200})
-	if err != nil {
-		return err
-	}
-
-	err = c.InsertOne(ctx, &HotelNumber{"6", 200})
-	if err != nil {
-		return err
-	}
-
-	for i := 7; i <= 80; i++ {
-		hotel_id := strconv.Itoa(i)
-		var room_num int64
-		room_num = 200
-		if i%3 == 1 {
-			room_num = 300
-		} else if i%3 == 2 {
-			room_num = 250
-		}
-		err = c.InsertOne(ctx, &HotelNumber{hotel_id, room_num})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-} */
-
 func NewReservationServiceImpl(ctx context.Context, reserveCache backend.Cache, reserveDB backend.NoSQLDatabase) (ReservationService, error) {
-	/* err := initReservationDB(ctx, reserveDB)
-	if err != nil {
-		return nil, err
-	} */
 	r := &ReservationServiceImpl{reserveCache: reserveCache, reserveDB: reserveDB}
 	return r, nil
 }
 
 func (r *ReservationServiceImpl) MakeReservation(ctx context.Context, customerName string, hotelIds []string, inDate string, outDate string, roomNumber int64) ([]string, error) {
-	reservation_collection, err := r.reserveDB.GetCollection(ctx, "reservation-db", "reservation")
+	reservation_collection, err := r.reserveDB.GetCollection(ctx, "reservation_db", "reservation")
 	if err != nil {
 		return []string{}, err
 	}
-	hnumber_collection, err := r.reserveDB.GetCollection(ctx, "reservation-db", "number")
+	hnumber_collection, err := r.reserveDB.GetCollection(ctx, "reservation_db", "number")
 	if err != nil {
 		return []string{}, err
 	}
@@ -121,7 +57,7 @@ func (r *ReservationServiceImpl) MakeReservation(ctx context.Context, customerNa
 		if !exists {
 			var reservations []Reservation
 
-			query := bson.D{{"hotelid", hotelId}, {"indate", indate}, {"outdate", outdate}}
+			query := bson.D{{Key: "HotelId", Value: hotelId}, {Key: "InDate", Value: indate}, {Key: "OutDate", Value: outdate}}
 			res, err := reservation_collection.FindMany(ctx, query)
 			if err != nil {
 				return []string{}, err
@@ -142,7 +78,7 @@ func (r *ReservationServiceImpl) MakeReservation(ctx context.Context, customerNa
 			return []string{}, err
 		}
 		if !exists {
-			query := bson.D{{"hotelid", hotelId}}
+			query := bson.D{{Key: "HotelId", Value: hotelId}}
 			res, err := hnumber_collection.FindOne(ctx, query)
 			if err != nil {
 				return []string{}, err
@@ -184,11 +120,11 @@ func (r *ReservationServiceImpl) MakeReservation(ctx context.Context, customerNa
 }
 
 func (r *ReservationServiceImpl) CheckAvailability(ctx context.Context, customerName string, hotelIds []string, inDate string, outDate string, roomNumber int64) ([]string, error) {
-	reservation_collection, err := r.reserveDB.GetCollection(ctx, "reservation-db", "reservation")
+	reservation_collection, err := r.reserveDB.GetCollection(ctx, "reservation_db", "reservation")
 	if err != nil {
 		return []string{}, err
 	}
-	hnumber_collection, err := r.reserveDB.GetCollection(ctx, "reservation-db", "number")
+	hnumber_collection, err := r.reserveDB.GetCollection(ctx, "reservation_db", "number")
 	if err != nil {
 		return []string{}, err
 	}
@@ -214,7 +150,7 @@ func (r *ReservationServiceImpl) CheckAvailability(ctx context.Context, customer
 				// Check Database
 				var reservations []Reservation
 				//query := `{"HotelId":"` + hotelId + `", "InDate":"` + indate + `", "OutDate":"` + outdate + `"}`
-				query := bson.D{{"hotelid", hotelId}, {"indate", indate}, {"outdate", outdate}} // TODO fix this?
+				query := bson.D{{Key: "HotelId", Value: hotelId}, {Key: "InDate", Value: indate}, {Key: "OutDate", Value: outdate}} // TODO fix this?
 				res, err := reservation_collection.FindMany(ctx, query)
 				if err != nil {
 					return []string{}, err
@@ -241,7 +177,7 @@ func (r *ReservationServiceImpl) CheckAvailability(ctx context.Context, customer
 				return []string{}, err
 			}
 			if !exists {
-				query := bson.D{{"hotelid", hotelId}}
+				query := bson.D{{Key: "HotelId", Value: hotelId}}
 				res, err := hnumber_collection.FindOne(ctx, query)
 				if err != nil {
 					return []string{}, err
