@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/blueprint-uservices/blueprint/runtime/core/backend"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -34,6 +35,7 @@ func NewInsidePaymentServiceImpl(ctx context.Context, insidePaymentDB backend.No
 func (s *InsidePaymentServiceImpl) PayDifference(ctx context.Context, info PaymentInfo) error {
 	userId := info.UserId
 	payment := Payment{
+		ID:      uuid.New().String(),
 		OrderID: info.OrderId,
 		Price:   info.Price,
 		UserID:  info.UserId,
@@ -67,7 +69,7 @@ func (s *InsidePaymentServiceImpl) PayDifference(ctx context.Context, info Payme
 		}
 		err = s.paymentService.Pay(ctx, outsidePaymentInfo)
 		if err != nil {
-			fmt.Errorf("pay difference failed")
+			return fmt.Errorf("pay difference failed: %w", err)
 		}
 		payment.PaymentType = PaymentType_E
 		s.savePayment(ctx, payment)
@@ -109,6 +111,7 @@ func (s *InsidePaymentServiceImpl) Pay(ctx context.Context, info PaymentInfo) (b
 	}
 
 	payment := Payment{
+		ID:      uuid.New().String(),
 		OrderID: info.OrderId,
 		Price:   order.Price,
 		UserID:  userId,
@@ -141,7 +144,7 @@ func (s *InsidePaymentServiceImpl) Pay(ctx context.Context, info PaymentInfo) (b
 		}
 		err = s.paymentService.Pay(ctx, outsidePaymentInfo)
 		if err != nil {
-			fmt.Errorf("pay difference failed")
+			return false, fmt.Errorf("pay failed: %w", err)
 		}
 		payment.PaymentType = PaymentType_O
 		s.savePayment(ctx, payment)

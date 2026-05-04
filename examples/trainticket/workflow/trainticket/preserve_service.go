@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/blueprint-uservices/blueprint/runtime/core/backend"
+	"github.com/google/uuid"
 )
 
 type PreserveService interface {
@@ -117,6 +118,7 @@ func (p *PreserveServiceImpl) Preserve(ctx context.Context, oti OrderTicketsInfo
 
 	// 4.3. Send order request
 	order := Order{
+		ID:                     uuid.New().String(),
 		TrainNumber:            oti.TripID,
 		AccountID:              oti.AccountID,
 		FromStation:            oti.From,

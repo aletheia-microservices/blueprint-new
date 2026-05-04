@@ -312,12 +312,9 @@ func (t *TravelServiceImpl) findByRouteId(ctx context.Context, routeId string) (
 	}
 
 	var trip Trip
-	ok, err := cursor.One(ctx, &trip)
+	_, err = cursor.One(ctx, &trip)
 	if err != nil {
 		return Trip{}, err
-	}
-	if !ok {
-		return Trip{}, fmt.Errorf("trip not found for route id (%s)", routeId)
 	}
 	return trip, nil
 }
@@ -334,11 +331,7 @@ func (t *TravelServiceImpl) findAll(ctx context.Context) ([]Trip, error) {
 	}
 
 	var trips []Trip
-	err = cursor.All(ctx, &trips)
-	if err != nil {
-		return nil, err
-	}
-	return trips, nil
+	return trips, cursor.All(ctx, &trips)
 }
 
 func (t *TravelServiceImpl) getTickets(ctx context.Context, trip Trip, route1 Route, startPlaceName string, endPlaceName string, departureTime string) (TripResponse, error) {
@@ -433,7 +426,6 @@ func afterToday(dateStr string) bool {
 		} else {
 			return true
 		}
-	} else {
-		return true
 	}
+	return true
 }

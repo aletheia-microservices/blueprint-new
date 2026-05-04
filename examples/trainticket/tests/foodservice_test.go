@@ -125,10 +125,12 @@ func TestFoodServiceCreateAndFind(t *testing.T) {
 	}
 	created, err := service.CreateFoodOrder(ctx, foodOrder)
 	assert.NoError(t, err)
+	assert.NotEmpty(t, created.ID)
 	assert.Equal(t, "food_ord001", created.OrderID)
 
 	found, err := service.FindFoodOrderByOrderId(ctx, "food_ord001")
 	assert.NoError(t, err)
+	assert.NotEmpty(t, found.ID)
 	assert.Equal(t, "Sandwich", found.FoodName)
 }
 

@@ -120,6 +120,33 @@ func TestInsidePaymentServiceQueryPayment(t *testing.T) {
 	_ = payments
 }
 
+func TestInsidePaymentServicePayDifferenceSavesWithID(t *testing.T) {
+	ctx := context.Background()
+	service, err := insidePaymentServiceRegistry.Get(ctx)
+	assert.NoError(t, err)
+
+	// fund the account so PayDifference takes the direct-save path (no outside payment needed)
+	_, err = service.CreateAccount(ctx, trainticket.AccountInfo{UserId: "ip_user_paydiff001", Money: "1000"})
+	assert.NoError(t, err)
+
+	err = service.PayDifference(ctx, trainticket.PaymentInfo{
+		UserId:  "ip_user_paydiff001",
+		OrderId: "ip_order_paydiff001",
+		Price:   "50",
+	})
+	assert.NoError(t, err)
+
+	payments, err := service.QueryPayment(ctx)
+	assert.NoError(t, err)
+	for _, p := range payments {
+		if p.OrderID == "ip_order_paydiff001" {
+			assert.NotEmpty(t, p.ID)
+			return
+		}
+	}
+	t.Fatal("payment for ip_order_paydiff001 not found")
+}
+
 func TestInsidePaymentServiceDrawback(t *testing.T) {
 	ctx := context.Background()
 	service, err := insidePaymentServiceRegistry.Get(ctx)

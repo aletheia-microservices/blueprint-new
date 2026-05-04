@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/blueprint-uservices/blueprint/runtime/core/backend"
+	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -32,6 +33,7 @@ func (c *ConsignServiceImpl) InsertConsign(ctx context.Context, consignRequest C
 	}
 
 	consignRecord := ConsignRecord{
+		ID:         uuid.New().String(),
 		OrderID:    consignRequest.OrderID,
 		AccountID:  consignRequest.AccountID,
 		HandleDate: consignRequest.HandleDate,

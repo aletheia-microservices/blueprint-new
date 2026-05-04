@@ -2,7 +2,7 @@ package trainticket
 
 import "time"
 
-const CALENDAR_LAYOUT = "2025-08-27 22:30:00"
+const CALENDAR_LAYOUT = "2006-01-02 15:04:05"
 
 type OrderTicketsInfo struct {
 	AccountID       string

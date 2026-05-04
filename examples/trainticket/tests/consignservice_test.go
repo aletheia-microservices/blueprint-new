@@ -61,6 +61,7 @@ func TestConsignServiceInsert(t *testing.T) {
 	}
 	record, err := service.InsertConsign(ctx, req)
 	assert.NoError(t, err)
+	assert.NotEmpty(t, record.ID)
 	assert.Equal(t, "consign_ord001", record.OrderID)
 	assert.Equal(t, "Alice", record.Consignee)
 	assert.Greater(t, record.Price, 0.0)

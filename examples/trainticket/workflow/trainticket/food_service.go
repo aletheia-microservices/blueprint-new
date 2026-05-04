@@ -33,6 +33,7 @@ func NewFoodServiceImpl(ctx context.Context, foodDB backend.NoSQLDatabase, foodO
 
 func (c *FoodServiceImpl) CreateFoodOrder(ctx context.Context, addFoodOrder FoodOrder) (FoodOrder, error) {
 	foodOrder := FoodOrder{
+		ID:          uuid.New().String(),
 		OrderID:     addFoodOrder.OrderID,
 		FoodType:    addFoodOrder.FoodType,
 		StationName: addFoodOrder.StationName,

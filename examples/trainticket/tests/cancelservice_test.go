@@ -131,8 +131,8 @@ func TestCancelServiceCancelOrder(t *testing.T) {
 		AccountID:  "cancel_user001",
 		Status:     trainticket.ORDER_STATUS_NOT_PAID,
 		Price:      "0.00",
-		TravelDate: "252549-08-257 2525:120:00",
-		TravelTime: "252549-08-257 2525:120:00",
+		TravelDate: "2020-01-01 00:00:00",
+		TravelTime: "2020-01-01 00:00:00",
 	}
 	_, err = orderService.CreateNewOrder(ctx, order)
 	assert.NoError(t, err)
