@@ -1,33 +1,23 @@
 package order
 
-import "github.com/google/uuid"
-
 type CreateOrderCommand struct {
 	OrderDto OrderDto
 }
 
 type CancelOrderRequest struct {
-	OrderDto OrderDto
+	OrderId string
 }
 
 type CreateOrderResult struct {
-	Id uuid.UUID
+	Id string
 }
 
 type CancelOrderResponse struct {
-	Id uuid.UUID
-}
-
-type UpdateOrderCommand struct {
-	OrderDto OrderDto
-}
-
-type UpdateOrderResult struct {
 	IsSuccess bool
 }
 
 type GetOrdersByUserRequest struct {
-	CustomerId uuid.UUID
+	CustomerId string
 }
 
 type GetOrdersByUserResponse struct {
@@ -35,9 +25,36 @@ type GetOrdersByUserResponse struct {
 }
 
 type GetOrderRequest struct {
-	CustomerId uuid.UUID
+	OrderId string
 }
 
 type GetOrderResponse struct {
-	Orders OrderDto
+	Order OrderDto
+}
+
+type ShipOrderRequest struct {
+	OrderId string
+}
+
+type ShipOrderResponse struct {
+	IsSuccess bool
+}
+
+type DraftOrderItem struct {
+	ProductId   int
+	ProductName string
+	UnitPrice   float64
+	Discount    float64
+	PictureUrl  string
+	Units       int
+}
+
+type CreateOrderDraftCommand struct {
+	BuyerId string
+	Items   []DraftOrderItem
+}
+
+type CreateOrderDraftResponse struct {
+	OrderItems []OrderItemDto
+	Total      float64
 }

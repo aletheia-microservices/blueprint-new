@@ -1,16 +1,17 @@
 package basket
 
 type CustomerBasket struct {
-	BuyerID string
-	Items   []BasketItem
+	UserName string       `bson:"UserName"`
+	BuyerID  string       `bson:"BuyerID"`
+	Items    []BasketItem `bson:"Items"`
 }
 
 type BasketItem struct {
-	ID          string
-	ProductID   int
-	ProductName string
-	UnitPrice float64
-	OldUnitPrice float64
-	Quantity int
-	PictureUrl string
+	ID           string  `bson:"ID"`
+	ProductID    int     `bson:"ProductID"`
+	ProductName  string  `bson:"ProductName"`
+	UnitPrice    float64 `bson:"UnitPrice"`
+	OldUnitPrice float64 `bson:"OldUnitPrice"`
+	Quantity     int     `bson:"Quantity"`
+	PictureUrl   string  `bson:"PictureUrl"`
 }

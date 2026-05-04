@@ -2,27 +2,38 @@ package web
 
 import (
 	"context"
-
-	"github.com/google/uuid"
+	"time"
 
 	"github.com/blueprint-uservices/blueprint/examples/dotnet_eshop/workflow/basket"
 	"github.com/blueprint-uservices/blueprint/examples/dotnet_eshop/workflow/catalog"
 	"github.com/blueprint-uservices/blueprint/examples/dotnet_eshop/workflow/order"
 )
 
+// WebApp bundles the Razor page behaviors of the original WebApp into a single testable service.
+// Each method corresponds to a page action in the original:
+//   - GetCatalogItems  -> Catalog.razor OnInitializedAsync
+//   - GetCatalogItem   -> ItemPage.razor OnInitializedAsync
+//   - AddToCartAsync   -> ItemPage.razor AddToCartAsync
+//   - GetBasketItems   -> CartPage.razor OnInitializedAsync
+//   - SetQuantityAsync -> CartPage.razor UpdateQuantityAsync (qty=0 removes)
+//   - CheckoutAsync    -> Checkout.razor HandleValidSubmitAsync
+//   - GetOrders        -> Orders.razor OnInitializedAsync
 type WebApp interface {
-	OnPostRemoveToCartAsync(ctx context.Context, productId uuid.UUID) error
-	OnPostCheckoutAsync(ctx context.Context) error
-	OnGetOrdersAsync(ctx context.Context) ([]order.OrderDto, error)
-	OnGetProductsAsync(ctx context.Context, categoryName string) ([]catalog.Product, []string, string, error)
-	OnPostAddToCartAsync(ctx context.Context, productId uuid.UUID) error
+	GetCatalogItems(ctx context.Context, typeId int, brandId int) ([]catalog.CatalogItem, error)
+	GetCatalogItem(ctx context.Context, itemId int) (catalog.CatalogItem, error)
+	AddToCartAsync(ctx context.Context, productId int) error
+	GetBasketItems(ctx context.Context) ([]basket.BasketItem, error)
+	SetQuantityAsync(ctx context.Context, productId int, quantity int) error
+	CheckoutAsync(ctx context.Context) error
+	GetOrders(ctx context.Context) ([]order.OrderDto, error)
 }
 
 type WebAppImpl struct {
 	basketService  basket.BasketService
 	catalogService catalog.CatalogService
 	orderService   order.OrderService
-	customerId     uuid.UUID
+	customerId     string
+	userName       string
 }
 
 func NewWebAppImpl(ctx context.Context, basketService basket.BasketService, catalogService catalog.CatalogService, orderService order.OrderService) (WebApp, error) {
@@ -30,129 +41,142 @@ func NewWebAppImpl(ctx context.Context, basketService basket.BasketService, cata
 		basketService:  basketService,
 		catalogService: catalogService,
 		orderService:   orderService,
-		customerId:     uuid.MustParse("5334c996-8457-4cf0-815c-ed2b77c4ff61"),
+		customerId:     "5334c996-8457-4cf0-815c-ed2b77c4ff61",
+		userName:       "swn",
 	}
 	return s, nil
 }
 
-var quantity int
-var color string
+func (webapp *WebAppImpl) GetCatalogItem(ctx context.Context, itemId int) (catalog.CatalogItem, error) {
+	resp, err := webapp.catalogService.GetItemById(ctx, catalog.GetItemByIDRequest{ID: itemId})
+	if err != nil {
+		return catalog.CatalogItem{}, err
+	}
+	return resp.Item, nil
+}
 
-func (webapp *WebAppImpl) OnPostRemoveToCartAsync(ctx context.Context, productId uuid.UUID) error {
-	basketResponse, err := webapp.basketService.GetBasket(ctx, basket.GetBasketRequest{UserName: "swn"})
+func (webapp *WebAppImpl) GetBasketItems(ctx context.Context) ([]basket.BasketItem, error) {
+	resp, err := webapp.basketService.GetBasket(ctx, basket.GetBasketRequest{UserName: webapp.userName})
+	if err != nil {
+		return nil, err
+	}
+	return resp.Cart.Items, nil
+}
+
+func (webapp *WebAppImpl) GetCatalogItems(ctx context.Context, typeId int, brandId int) ([]catalog.CatalogItem, error) {
+	if typeId != 0 && brandId != 0 {
+		resp, err := webapp.catalogService.GetItemsByBrandAndTypeId(ctx, catalog.GetItemsByBrandAndTypeRequest{TypeId: typeId, BrandId: brandId})
+		if err != nil {
+			return nil, err
+		}
+		return resp.Items, nil
+	} else if brandId != 0 {
+		resp, err := webapp.catalogService.GetItemsByBrandId(ctx, catalog.GetItemsByBrandRequest{BrandId: brandId})
+		if err != nil {
+			return nil, err
+		}
+		return resp.Items, nil
+	}
+	resp, err := webapp.catalogService.GetAllItems(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return resp.Items, nil
+}
+
+func (webapp *WebAppImpl) AddToCartAsync(ctx context.Context, productId int) error {
+	productResponse, err := webapp.catalogService.GetItemById(ctx, catalog.GetItemByIDRequest{ID: productId})
+	if err != nil {
+		return err
+	}
+
+	basketResponse, err := webapp.basketService.GetBasket(ctx, basket.GetBasketRequest{UserName: webapp.userName})
 	if err != nil {
 		return err
 	}
 	cart := basketResponse.Cart
 
-	removeAll(&cart, productId)
-
-	_, err = webapp.basketService.StoreBasket(ctx, basket.UpdateBasketRequest{Cart: cart})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func removeAll(cart *basket.CustomerBasket, productId uuid.UUID) []basket.BasketItem {
-	remainingItems := cart.Items[:0]
-	for _, item := range cart.Items {
-		if item.ProductID != productId {
-			remainingItems = append(remainingItems, item)
+	found := false
+	for i, item := range cart.Items {
+		if item.ProductID == productId {
+			cart.Items[i].Quantity++
+			found = true
+			break
 		}
 	}
-	return remainingItems
+	if !found {
+		cart.Items = append(cart.Items, basket.BasketItem{
+			ProductID:   productId,
+			ProductName: productResponse.Item.Name,
+			UnitPrice:   productResponse.Item.Price,
+			Quantity:    1,
+		})
+	}
+
+	_, err = webapp.basketService.UpdateBasket(ctx, basket.UpdateBasketRequest{Cart: cart})
+	return err
 }
 
-func (webapp *WebAppImpl) OnPostCheckoutAsync(ctx context.Context) error {
-	basketResponse, err := webapp.basketService.GetBasket(ctx, basket.GetBasketRequest{UserName: "swn"})
+func (webapp *WebAppImpl) SetQuantityAsync(ctx context.Context, productId int, quantity int) error {
+	basketResponse, err := webapp.basketService.GetBasket(ctx, basket.GetBasketRequest{UserName: webapp.userName})
 	if err != nil {
 		return err
 	}
 	cart := basketResponse.Cart
 
-	// assumption customerId is passed in from the UI authenticated user swn
-	var order basket.BasketCheckoutDto
-	order.CustomerId = webapp.customerId
-	order.UserName = cart.UserName
-	order.TotalPrice = cart.TotalPrice
+	var updated []basket.BasketItem
+	for _, item := range cart.Items {
+		if item.ProductID == productId {
+			if quantity > 0 {
+				item.Quantity = quantity
+				updated = append(updated, item)
+			}
+		} else {
+			updated = append(updated, item)
+		}
+	}
+	cart.Items = updated
 
-	webapp.basketService.CheckoutBasket(ctx, basket.CheckoutBasketCommand{order})
-
-	return nil
+	_, err = webapp.basketService.UpdateBasket(ctx, basket.UpdateBasketRequest{Cart: cart})
+	return err
 }
 
-func (webapp *WebAppImpl) OnGetOrdersAsync(ctx context.Context) ([]order.OrderDto, error) {
-	// assumption customerId is passed in from the UI authenticated user swn
-	customerId := webapp.customerId
-	response, err := webapp.orderService.GetOrdersByCustomer(ctx, order.GetOrdersByCustomerQuery{customerId})
+func (webapp *WebAppImpl) CheckoutAsync(ctx context.Context) error {
+	basketResponse, err := webapp.basketService.GetBasket(ctx, basket.GetBasketRequest{UserName: webapp.userName})
+	if err != nil {
+		return err
+	}
+	cart := basketResponse.Cart
+
+	var orderItems []order.OrderItemDto
+	for _, item := range cart.Items {
+		orderItems = append(orderItems, order.OrderItemDto{
+			ProductID: item.ProductID,
+			Quantity:  item.Quantity,
+			Price:     item.UnitPrice,
+		})
+	}
+
+	orderDto := order.OrderDto{
+		CustomerId: webapp.customerId,
+		OrderName:  webapp.userName,
+		OrderDate:  time.Now().UTC().Format(time.RFC3339),
+		Status:     order.Submitted,
+		OrderItems: orderItems,
+	}
+	_, err = webapp.orderService.CreateOrder(ctx, order.CreateOrderCommand{OrderDto: orderDto})
+	if err != nil {
+		return err
+	}
+
+	_, err = webapp.basketService.DeleteBasket(ctx, basket.DeleteBasketRequest{UserName: webapp.userName})
+	return err
+}
+
+func (webapp *WebAppImpl) GetOrders(ctx context.Context) ([]order.OrderDto, error) {
+	response, err := webapp.orderService.GetOrdersByUser(ctx, order.GetOrdersByUserRequest{CustomerId: webapp.customerId})
 	if err != nil {
 		return nil, err
 	}
 	return response.Orders, nil
-}
-
-func (webapp *WebAppImpl) OnGetProductsAsync(ctx context.Context, categoryName string) ([]catalog.Product, []string, string, error) {
-	response, err := webapp.catalogService.GetProducts(ctx)
-	if err != nil {
-		return nil, nil, "", err
-	}
-
-	categorySet := make(map[string]bool)
-	for _, p := range response.Products {
-		for _, c := range p.Category {
-			categorySet[c] = true
-		}
-	}
-	var categoryList []string
-	for c := range categorySet {
-		categoryList = append(categoryList, c)
-	}
-
-	var productList []catalog.Product
-	var selectedCategory string
-
-	if categoryName != "" {
-		for _, p := range response.Products {
-			for _, c := range p.Category {
-				if c == categoryName {
-					productList = append(productList, p)
-					break
-				}
-			}
-		}
-		selectedCategory = categoryName
-	} else {
-		productList = response.Products
-	}
-	return productList, categoryList, selectedCategory, nil
-
-}
-
-func (webapp *WebAppImpl) OnPostAddToCartAsync(ctx context.Context, productId uuid.UUID) error {
-	productResponse, err := webapp.catalogService.GetProductById(ctx, catalog.GetItemByIDRequest{ID: productId})
-	if err != nil {
-		return err
-	}
-
-	basketResponse, err := webapp.basketService.GetBasket(ctx, basket.GetBasketRequest{UserName: "swn"})
-	if err != nil {
-		return err
-	}
-	retBasket := basketResponse.Cart
-	retBasket.Items = append(retBasket.Items, basket.BasketItem{
-		ProductID:   productId,
-		ProductName: productResponse.Product.Name,
-		Price:       productResponse.Product.Price,
-		Quantity:    quantity,
-		Color:       color,
-	})
-
-	_, err = webapp.basketService.StoreBasket(ctx, basket.UpdateBasketRequest{Cart: retBasket})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

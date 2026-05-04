@@ -13,8 +13,9 @@ type DeleteBasketRequest struct {
 }
 
 type CustomerBasketResponse struct {
-	BasketItems []BasketItem
+	Cart CustomerBasket
 }
 
 type DeleteBasketResponse struct {
+	IsSuccess bool
 }

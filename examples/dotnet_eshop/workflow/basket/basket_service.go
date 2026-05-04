@@ -9,69 +9,44 @@ import (
 )
 
 type BasketService interface {
-	Run(ctx context.Context) error
-	Get(ctx context.Context, query GetBasketRequest) (CustomerBasketResponse, error)
-	Update(ctx context.Context, request UpdateBasketRequest) (CustomerBasketResponse, error)
-	Delete(ctx context.Context, query DeleteBasketRequest) (DeleteBasketResponse, error)
+	GetBasket(ctx context.Context, query GetBasketRequest) (CustomerBasketResponse, error)
+	UpdateBasket(ctx context.Context, request UpdateBasketRequest) (CustomerBasketResponse, error)
+	DeleteBasket(ctx context.Context, query DeleteBasketRequest) (DeleteBasketResponse, error)
 }
 
 type BasketServiceImpl struct {
-	database      backend.NoSQLDatabase
-	queue         backend.Queue
-	exit_on_error bool
+	database backend.NoSQLDatabase
 }
 
-func NewBasketServiceImpl(ctx context.Context, database backend.NoSQLDatabase, queue backend.Queue) (BasketService, error) {
+func NewBasketServiceImpl(ctx context.Context, database backend.NoSQLDatabase) (BasketService, error) {
 	s := &BasketServiceImpl{
-		database:      database,
-		queue:         queue,
-		exit_on_error: false,
+		database: database,
 	}
 	return s, nil
 }
 
-func (s *BasketServiceImpl) Update(ctx context.Context, command UpdateBasketRequest) (CustomerBasketResponse, error) {
-	err := s.update(ctx, command.Cart)
+func (s *BasketServiceImpl) UpdateBasket(ctx context.Context, command UpdateBasketRequest) (CustomerBasketResponse, error) {
+	err := s.storeBasket(ctx, command.Cart)
 	if err != nil {
 		return CustomerBasketResponse{}, err
 	}
-	return CustomerBasketResponse{BasketItems: command.Cart.Items}, nil
+	return CustomerBasketResponse{Cart: command.Cart}, nil
 }
 
-func (s *BasketServiceImpl) Get(ctx context.Context, query GetBasketRequest) (CustomerBasketResponse, error) {
+func (s *BasketServiceImpl) GetBasket(ctx context.Context, query GetBasketRequest) (CustomerBasketResponse, error) {
 	basket, err := s.getBasket(ctx, query.UserName)
 	if err != nil {
 		return CustomerBasketResponse{}, err
 	}
-	return CustomerBasketResponse{BasketItems: basket.Items}, nil
+	return CustomerBasketResponse{Cart: basket}, nil
 }
 
-func (s *BasketServiceImpl) Delete(ctx context.Context, query DeleteBasketRequest) (DeleteBasketResponse, error) {
+func (s *BasketServiceImpl) DeleteBasket(ctx context.Context, query DeleteBasketRequest) (DeleteBasketResponse, error) {
 	err := s.deleteBasket(ctx, query.UserName)
 	if err != nil {
-		return DeleteBasketResponse{}, err
+		return DeleteBasketResponse{IsSuccess: false}, err
 	}
-	return DeleteBasketResponse{}, nil
-}
-
-func (s *BasketServiceImpl) Run(ctx context.Context) error {
-	for {
-		select {
-		case <-ctx.Done():
-			return nil
-		default:
-			var event OrderStartedEvent
-			ok, err := s.queue.Pop(ctx, &event)
-			if err != nil && s.exit_on_error {
-				return err
-			}
-			if !ok {
-				continue
-			}
-			s.deleteBasket(ctx, event.UserID)
-		}
-	}
-	return nil
+	return DeleteBasketResponse{IsSuccess: true}, nil
 }
 
 func (s *BasketServiceImpl) getBasket(ctx context.Context, username string) (CustomerBasket, error) {
@@ -95,12 +70,20 @@ func (s *BasketServiceImpl) getBasket(ctx context.Context, username string) (Cus
 	return cart, nil
 }
 
-func (s *BasketServiceImpl) update(ctx context.Context, basket CustomerBasket) error {
+func (s *BasketServiceImpl) storeBasket(ctx context.Context, basket CustomerBasket) error {
 	collection, err := s.database.GetCollection(ctx, "basket_db", "basket")
 	if err != nil {
 		return err
 	}
-	return collection.InsertOne(ctx, basket)
+	filter := bson.D{{Key: "UserName", Value: basket.UserName}}
+	updated, err := collection.ReplaceOne(ctx, filter, basket)
+	if err != nil {
+		return err
+	}
+	if updated == 0 {
+		return collection.InsertOne(ctx, basket)
+	}
+	return nil
 }
 
 func (s *BasketServiceImpl) deleteBasket(ctx context.Context, username string) error {

@@ -13,6 +13,9 @@ use (
 	./examples/dsb_socialnetwork/wiring
 	./examples/dsb_socialnetwork/workflow
 	./examples/dsb_socialnetwork/tests
+	./examples/dotnet_eshop/tests
+	./examples/dotnet_eshop/wiring
+	./examples/dotnet_eshop/workflow
 	./examples/eshopmicroservices/tests
 	./examples/eshopmicroservices/wiring
 	./examples/eshopmicroservices/workflow
