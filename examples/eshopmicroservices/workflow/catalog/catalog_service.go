@@ -15,8 +15,6 @@ type CatalogService interface {
 	GetProductById(ctx context.Context, query GetProductByIdQuery) (GetProductByIdResponse, error)
 	GetProductByCategory(ctx context.Context, query GetProductByCategoryQuery) (GetProductByCategoryResponse, error)
 	GetProducts(ctx context.Context) (GetProductsResponse, error)
-
-	Init(ctx context.Context) error // new RunnableHTTP in Blueprint
 }
 
 type CatalogServiceImpl struct {
@@ -28,10 +26,6 @@ func NewCatalogServiceImpl(ctx context.Context, database backend.NoSQLDatabase) 
 		database: database,
 	}
 	return s, nil
-}
-
-func (s *CatalogServiceImpl) Init(ctx context.Context) error {
-	return nil
 }
 
 func (s *CatalogServiceImpl) CreateProduct(ctx context.Context, command CreateProductCommand) (CreateProductResponse, error) {

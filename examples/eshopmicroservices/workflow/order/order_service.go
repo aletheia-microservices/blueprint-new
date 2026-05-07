@@ -3,6 +3,7 @@ package order
 import (
 	"context"
 	"fmt"
+	"log"
 	"sort"
 
 	"github.com/blueprint-uservices/blueprint/runtime/core/backend"
@@ -39,9 +40,11 @@ func (s *OrderServiceImpl) Init(ctx context.Context) error {
 		var message basket.BasketChekoutEvent
 		ok, err := s.queue.Pop(ctx, &message)
 		if err != nil {
-			return err
+			log.Printf("[ERROR] init: error reading from queue: %s\n", err.Error())
+			continue
 		}
 		if !ok {
+			log.Printf("[ERROR] init: no message in queue")
 			continue
 		}
 
@@ -63,6 +66,7 @@ func (s *OrderServiceImpl) Init(ctx context.Context) error {
 		}
 		_, err = s.CreateNewOrder(ctx, CreateOrderCommand{OrderDto: orderDto})
 		if err != nil {
+			log.Printf("[ERROR] init: error creating ne order: %s\n", err.Error())
 			return err
 		}
 	}

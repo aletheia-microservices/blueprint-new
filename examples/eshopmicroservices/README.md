@@ -148,7 +148,6 @@ curl -X POST 'http://localhost:12354/OnPostAddToCartAsync?productId=f38000b7-4be
 curl -X POST 'http://localhost:12354/OnPostRemoveToCartAsync?productId=f38000b7-4be2-417c-ba4e-66bdb29379fa'
 
 # Checkout
-# (currently not working due to to queue thread that reads orders)
 curl -X POST 'http://localhost:12354/OnPostCheckoutAsync'
 
 # Get orders
